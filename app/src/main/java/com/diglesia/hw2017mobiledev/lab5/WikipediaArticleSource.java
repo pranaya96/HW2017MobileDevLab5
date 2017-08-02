@@ -22,6 +22,7 @@ import java.util.List;
 
 public class WikipediaArticleSource {
 
+
     public interface ArticleListener {
         void onArticleResponse(List<Article> articleList);
     }

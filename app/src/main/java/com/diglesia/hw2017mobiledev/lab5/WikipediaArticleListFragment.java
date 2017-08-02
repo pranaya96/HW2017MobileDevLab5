@@ -1,6 +1,8 @@
 package com.diglesia.hw2017mobiledev.lab5;
 
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.widget.SwipeRefreshLayout;
@@ -10,14 +12,21 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.ListView;
+import android.widget.TextView;
+
+import com.android.volley.toolbox.ImageLoader;
+import com.android.volley.toolbox.NetworkImageView;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class WikipediaArticleListFragment extends Fragment {
+    private List<Article> mArticles;
+
     private ListView mListView;
     private ArticleAdapter mArticleAdapter;
     private SwipeRefreshLayout mSwipeRefreshLayout;
+
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -41,20 +50,35 @@ public class WikipediaArticleListFragment extends Fragment {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 Article article = (Article) parent.getAdapter().getItem(position);
                 // Add your click handling code here.
+                Intent i = new Intent(Intent.ACTION_VIEW);
+                i.setData(Uri.parse(article.getURLString()));
+                startActivity(i);
             }
         });
-
-        // Load on start. Manually show the spinner.
-        mSwipeRefreshLayout.setRefreshing(true);
-	    refreshArticles();
-
-	    return v;
+        // If there is content to display, show it, otherwise refresh content.
+        if (mArticles != null) {
+            mArticleAdapter.setItems(mArticles);
+        } else {
+            mSwipeRefreshLayout.setRefreshing(true);
+            refreshArticles();
+        }
+        return v;
     }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setRetainInstance(true);
+    }
+
+
+
 
     private void refreshArticles() {
         WikipediaArticleSource.get(getContext()).getArticles(new WikipediaArticleSource.ArticleListener() {
             @Override
             public void onArticleResponse(List<Article> articleList) {
+                mArticles = articleList;
                 // Stop the spinner and update the list view.
                 mSwipeRefreshLayout.setRefreshing(false);
                 mArticleAdapter.setItems(articleList);
@@ -63,6 +87,10 @@ public class WikipediaArticleListFragment extends Fragment {
     }
 
     private class ArticleAdapter extends BaseAdapter {
+        private TextView mTitleTextView;
+        private TextView mBodyTextView;
+        private NetworkImageView imageView;
+
         private Context mContext;
         private LayoutInflater mInflater;
         private List<Article> mDataSource;
@@ -105,8 +133,21 @@ public class WikipediaArticleListFragment extends Fragment {
             // article's contents on them.
             // 2) Get a reference to the NetworkImageView, and use the ImageLoader vended by
             // WikipediaArticleSource to set the image.
+            mTitleTextView = (TextView) rowView.findViewById(R.id.textView_title);
+            String titleText = article.getTitle();
+            mTitleTextView.setText(titleText);
+
+            mBodyTextView = (TextView) rowView.findViewById(R.id.textView_body);
+            String bodyText = article.getBodyExtract();
+            mBodyTextView.setText(bodyText);
+
+            imageView = (NetworkImageView) rowView.findViewById(R.id.thumbnail);
+            ImageLoader loader = WikipediaArticleSource.get(getContext()).getImageLoader();
+            imageView.setImageUrl(article.getImageURLString(), loader);
 
             return rowView;
         }
+
     }
+
 }
